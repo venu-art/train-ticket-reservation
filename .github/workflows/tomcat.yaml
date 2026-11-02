@@ -1,16 +1,16 @@
-
 name: CI Pipeline to Build Java Code
-
 on:
   push:
     branches:
       - master
-
 jobs:
+
   build:
+    name: Build Java Application
     runs-on: ubuntu-latest
 
     steps:
+
       - name: checkout code
         uses: actions/checkout@v5
       - name: set-up jdk
@@ -18,27 +18,25 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-
       - name: validate with maven
         run: mvn validate
-
-      
       - name: compile with maven
         run: mvn compile
 
-  
       - name: test with maven
         run: mvn test
-
-   
       - name: package with maven
         run: mvn package
 
-   
       - name: verify war file
         run: ls -lh target/TrainBook-1.0.0-SNAPSHOT.war
-        
- 
+
+      - name: upload war artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-war
+          path: target/TrainBook-1.0.0-SNAPSHOT.war
+
   deploy-dev:
     name: Deploy to DEV
     needs: build
@@ -46,7 +44,8 @@ jobs:
     environment: developer
 
     steps:
-      - name: Download WAR file
+
+      - name: download war file
         uses: actions/download-artifact@v4
         with:
           name: application-war
@@ -54,10 +53,9 @@ jobs:
 
       - name: deploy war to DEV tomcat
         run: |
-          curl -v -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
+          curl --fail --show-error -u "${{ secrets.DEV_TOMCAT_USERNAME }}:${{ secrets.DEV_TOMCAT_PASSWORD }}" \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
-
+          "http://${{ secrets.DEV_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
 
 
   deploy-test:
@@ -67,7 +65,8 @@ jobs:
     environment: tester
 
     steps:
-      - name: Download WAR file
+
+      - name: download war file
         uses: actions/download-artifact@v4
         with:
           name: application-war
@@ -75,12 +74,10 @@ jobs:
 
       - name: deploy war to TEST tomcat
         run: |
-          curl -v -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
+          curl --fail --show-error -u "${{ secrets.TEST_TOMCAT_USERNAME }}:${{ secrets.TEST_TOMCAT_PASSWORD }}" \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+          "http://${{ secrets.TEST_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
 
-
-  
   deploy-preprod:
     name: Deploy to PRE-PROD
     needs: deploy-test
@@ -88,7 +85,8 @@ jobs:
     environment: preprod
 
     steps:
-      - name: Download WAR file
+
+      - name: download war file
         uses: actions/download-artifact@v4
         with:
           name: application-war
@@ -96,20 +94,18 @@ jobs:
 
       - name: deploy war to PRE-PROD tomcat
         run: |
-          curl -v -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
+          curl --fail --show-error -u "${{ secrets.PREPROD_TOMCAT_USERNAME }}:${{ secrets.PREPROD_TOMCAT_PASSWORD }}" \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
-
-
- 
-  deploy-prod:
+          "http://${{ secrets.PREPROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+ deploy-prod:
     name: Deploy to PROD
     needs: deploy-preprod
     runs-on: ubuntu-latest
     environment: prod
 
     steps:
-      - name: Download WAR file
+
+      - name: download war file
         uses: actions/download-artifact@v4
         with:
           name: application-war
@@ -117,11 +113,7 @@ jobs:
 
       - name: deploy war to PROD tomcat
         run: |
-          curl -v -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
+          curl --fail --show-error -u "${{ secrets.PROD_TOMCAT_USERNAME }}:${{ secrets.PROD_TOMCAT_PASSWORD }}" \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
-
-
-
-0.0-SNAPSHOT.war \
+          "http://${{ secrets.PROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"0.0-SNAPSHOT.war \
           "http://${{ secrets.PROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
