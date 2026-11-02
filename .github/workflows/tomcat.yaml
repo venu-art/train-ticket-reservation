@@ -41,8 +41,18 @@ jobs:
       - name: verify war file
         run: ls -lh target/TrainBook-1.0.0-SNAPSHOT.war
 
+  deploy-dev:
+    name: Deploy to DEV
+    needs: build
+    runs-on: ubuntu-latest
+    environment: developer
 
-    
+    steps:
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
 
       - name: deploy war to DEV tomcat
         run: |
@@ -50,13 +60,3 @@ jobs:
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
           "http://${{ secrets.DEV_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
 
-
-
-     
-
-
-      - name: deploy war to PROD tomcat
-        run: |
-          curl -v -u ${{ secrets.PROD_TOMCAT_USERNAME }}:${{ secrets.PROD_TOMCAT_PASSWORD }} \
-          -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.PROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
