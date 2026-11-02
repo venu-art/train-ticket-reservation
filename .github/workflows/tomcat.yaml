@@ -1,4 +1,3 @@
-
 name: CI Pipeline to Build Java Code
 
 on:
@@ -8,35 +7,41 @@ on:
 
 jobs:
 
+  # BUILD JAVA APPLICATION
   build:
     name: Build Java Application
     runs-on: ubuntu-latest
 
     steps:
 
-   
       - name: Checkout code
         uses: actions/checkout@v5
 
-  
       - name: Setup JDK
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-          cache: maven
+
+      # Install Maven
+      - name: Install Maven
+        run: |
+          sudo apt-get update
+          sudo apt-get install maven -y
+
+      - name: Check Java and Maven versions
+        run: |
+          java -version
+          mvn -version
 
       - name: Validate with Maven
         run: mvn validate
 
- 
       - name: Compile with Maven
         run: mvn compile
 
-
       - name: Test with Maven
         run: mvn test
-
 
       - name: Package with Maven
         run: mvn clean package
@@ -46,7 +51,6 @@ jobs:
           ls -lh target/
           test -f target/TrainBook-1.0.0-SNAPSHOT.war
 
-      # Upload WAR artifact
       - name: Upload WAR artifact
         uses: actions/upload-artifact@v4
         with:
@@ -54,5 +58,3 @@ jobs:
           path: target/TrainBook-1.0.0-SNAPSHOT.war
           if-no-files-found: error
           retention-days: 7
-
-
