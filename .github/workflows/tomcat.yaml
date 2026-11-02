@@ -52,21 +52,7 @@ jobs:
 
 
 
-      - name: deploy war to TEST tomcat
-        run: |
-          curl -v -u ${{ secrets.TEST_TOMCAT_USERNAME }}:${{ secrets.TEST_TOMCAT_PASSWORD }} \
-          -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.TEST_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
-
-
- 
-
-      - name: deploy war to PRE-PROD tomcat
-        run: |
-          curl -v -u ${{ secrets.PREPROD_TOMCAT_USERNAME }}:${{ secrets.PREPROD_TOMCAT_PASSWORD }} \
-          -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.PREPROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
-
+     
 
 
       - name: deploy war to PROD tomcat
