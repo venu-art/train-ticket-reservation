@@ -1,47 +1,75 @@
-name: ci pipeline to build java code and code quality by using sonarqube 
+
+name: CI Pipeline to Build Java Code
+
 on:
-   push:
-     branches: master
+  push:
+    branches:
+      - master
+
 jobs:
   build:
-     runs-on: ubuntu-latest
-     steps:
-       - name: checkout code
-         uses: actions/checkout@v5
-       - name: set-up jdk
-         uses: actions/setup-java@v5
-         with:
-            distribution: 'temurin'
-            java-version: '17'
-       - name: validate with maven 
-         run:  mvn validate
-       - name: compile with maven 
-         run:  mvn compile 
-       - name: test with maven 
-         run:  mvn test
-       - name: package with maven 
-         run:  mvn package
-       - name: verify war file 
-         run:  ls -lh target/
-       - name: SonarQube scan
-         uses: SonarSource/sonarqube-scan-action@v6
-         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-         with:
-          args: >
-            -Dsonar.projectKey=vcube154-train-book
-            -Dsonar.projectName=vcube154-train-book
+    runs-on: ubuntu-latest
 
-         
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v5
+      - name: set-up jdk
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: validate with maven
+        run: mvn validate
+
+      
+      - name: compile with maven
+        run: mvn compile
+
+  
+      - name: test with maven
+        run: mvn test
 
    
+      - name: package with maven
+        run: mvn package
 
-       
+   
+      - name: verify war file
+        run: ls -lh target/TrainBook-1.0.0-SNAPSHOT.war
 
 
 
 
-          
-         
-       
+      - name: deploy war to DEV tomcat
+        run: |
+          curl -v -u ${{ secrets.DEV_TOMCAT_USERNAME }}:${{ secrets.DEV_TOMCAT_PASSWORD }} \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://${{ secrets.DEV_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+
+
+
+      - name: deploy war to TEST tomcat
+        run: |
+          curl -v -u ${{ secrets.TEST_TOMCAT_USERNAME }}:${{ secrets.TEST_TOMCAT_PASSWORD }} \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://${{ secrets.TEST_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+
+     
+
+      - name: deploy war to PRE-PROD tomcat
+        run: |
+          curl -v -u ${{ secrets.PREPROD_TOMCAT_USERNAME }}:${{ secrets.PREPROD_TOMCAT_PASSWORD }} \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://${{ secrets.PREPROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+
+  
+
+      - name: deploy war to PROD tomcat
+        run: |
+          curl -v -u ${{ secrets.PROD_TOMCAT_USERNAME }}:${{ secrets.PROD_TOMCAT_PASSWORD }} \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://${{ secrets.PROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
