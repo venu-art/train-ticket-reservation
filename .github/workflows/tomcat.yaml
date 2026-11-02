@@ -37,39 +37,91 @@ jobs:
    
       - name: verify war file
         run: ls -lh target/TrainBook-1.0.0-SNAPSHOT.war
+        
+ 
+  deploy-dev:
+    name: Deploy to DEV
+    needs: build
+    runs-on: ubuntu-latest
+    environment: developer
 
-
-
+    steps:
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
 
       - name: deploy war to DEV tomcat
         run: |
-          curl -v -u ${{ secrets.DEV_TOMCAT_USERNAME }}:${{ secrets.DEV_TOMCAT_PASSWORD }} \
+          curl -v -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.DEV_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
 
 
 
+  deploy-test:
+    name: Deploy to TEST
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: tester
+
+    steps:
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
 
       - name: deploy war to TEST tomcat
         run: |
-          curl -v -u ${{ secrets.TEST_TOMCAT_USERNAME }}:${{ secrets.TEST_TOMCAT_PASSWORD }} \
+          curl -v -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.TEST_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
-
-
-     
-
-      - name: deploy war to PRE-PROD tomcat
-        run: |
-          curl -v -u ${{ secrets.PREPROD_TOMCAT_USERNAME }}:${{ secrets.PREPROD_TOMCAT_PASSWORD }} \
-          -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.PREPROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
 
 
   
+  deploy-preprod:
+    name: Deploy to PRE-PROD
+    needs: deploy-test
+    runs-on: ubuntu-latest
+    environment: preprod
+
+    steps:
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
+
+      - name: deploy war to PRE-PROD tomcat
+        run: |
+          curl -v -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+
+ 
+  deploy-prod:
+    name: Deploy to PROD
+    needs: deploy-preprod
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
 
       - name: deploy war to PROD tomcat
         run: |
-          curl -v -u ${{ secrets.PROD_TOMCAT_USERNAME }}:${{ secrets.PROD_TOMCAT_PASSWORD }} \
+          curl -v -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+
+
+0.0-SNAPSHOT.war \
           "http://${{ secrets.PROD_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
