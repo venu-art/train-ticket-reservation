@@ -41,8 +41,8 @@ jobs:
       - name: verify war file
         run: ls -lh target/TrainBook-1.0.0-SNAPSHOT.war
 
-  deploy-dev:
-    name: Deploy to DEV
+  deploy-developer:
+    name: Deploy to developer
     needs: build
     runs-on: ubuntu-latest
     environment: developer
@@ -54,7 +54,7 @@ jobs:
           name: application-war
           path: target/
 
-      - name: deploy war to DEV tomcat
+      - name: deploy war to developer tomcat
         run: |
           curl -v -u ${{ secrets.DEV_TOMCAT_USERNAME }}:${{ secrets.DEV_TOMCAT_PASSWORD }} \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
