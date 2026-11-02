@@ -1,60 +1,36 @@
-name: CI Pipeline to Build Java Code
+name: ci pipeline to build java code
 
 on:
   push:
-    branches:
-      - master
+    branches: master
 
 jobs:
-
-  # BUILD JAVA APPLICATION
   build:
-    name: Build Java Application
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Checkout code
+      - name: checkout code
         uses: actions/checkout@v5
 
-      - name: Setup JDK
+      - name: set-up jdk
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '17'
 
-      # Install Maven
-      - name: Install Maven
-        run: |
-          sudo apt-get update
-          sudo apt-get install maven -y
-
-      - name: Check Java and Maven versions
-        run: |
-          java -version
-          mvn -version
-
-      - name: Validate with Maven
+      - name: validate with maven
         run: mvn validate
 
-      - name: Compile with Maven
+      - name: compile with maven
         run: mvn compile
 
-      - name: Test with Maven
+      - name: test with maven
         run: mvn test
 
-      - name: Package with Maven
-        run: mvn clean package
+      - name: package with maven
+        run: mvn package
 
-      - name: Verify WAR file
-        run: |
-          ls -lh target/
-          test -f target/TrainBook-1.0.0-SNAPSHOT.war
+      - name: verify war file
+        run: ls -lh target/
 
-      - name: Upload WAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: application-war
-          path: target/TrainBook-1.0.0-SNAPSHOT.war
-          if-no-files-found: error
-          retention-days: 7
+      
