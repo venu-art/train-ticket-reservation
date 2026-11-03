@@ -8,9 +8,9 @@ on:
 
 jobs:
 
-  # ==============================
+  # ==================================
   # BUILD JAVA APPLICATION
-  # ==============================
+  # ==================================
 
   build:
     name: Build Java Application
@@ -18,9 +18,11 @@ jobs:
 
     steps:
 
+      # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v5
 
+      # Setup Java 17
       - name: Setup JDK
         uses: actions/setup-java@v5
         with:
@@ -33,20 +35,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install maven -y
 
-      - name: Check Java and Maven versions
+      # Check versions
+      - name: Check Java and Maven
         run: |
           java -version
           mvn -version
 
-      # Maven validation
+      # Validate project
       - name: Validate with Maven
         run: mvn validate
 
-      # Maven compilation
+      # Compile Java code
       - name: Compile with Maven
         run: mvn compile
 
-      # Maven testing
+      # Test application
       - name: Test with Maven
         run: mvn test
 
@@ -70,9 +73,9 @@ jobs:
           retention-days: 7
 
 
-  # ==============================
-  # DEPLOY TO DEV TOMCAT
-  # ==============================
+  # ==================================
+  # DEPLOY TO DEV ENVIRONMENT
+  # ==================================
 
   deploy-dev:
     name: Deploy to DEV Tomcat
@@ -89,10 +92,36 @@ jobs:
           name: application-war
           path: target/
 
-      # Deploy WAR to DEV
+      # Validate DEV host
+      - name: Validate DEV host
+        env:
+          TOMCAT_HOST: ${{ secrets.DEV_TOMCAT_HOST }}
+        run: |
+          if [ -z "$TOMCAT_HOST" ]; then
+            echo "ERROR: DEV host is empty"
+            exit 1
+          fi
+
+          if [[ "$TOMCAT_HOST" =~ [[:space:]] ]]; then
+            echo "ERROR: DEV host contains spaces"
+            exit 1
+          fi
+
+          if [[ "$TOMCAT_HOST" == http://* || "$TOMCAT_HOST" == https://* ]]; then
+            echo "ERROR: Enter only the IP address or hostname"
+            exit 1
+          fi
+
+          echo "DEV host format is valid"
+
+      # Deploy WAR to DEV Tomcat
       - name: Deploy WAR to DEV Tomcat
+        env:
+          TOMCAT_HOST: ${{ secrets.DEV_TOMCAT_HOST }}
+          TOMCAT_USERNAME: ${{ secrets.DEV_TOMCAT_USERNAME }}
+          TOMCAT_PASSWORD: ${{ secrets.DEV_TOMCAT_PASSWORD }}
         run: |
           curl --fail --show-error \
-          -u "${{ secrets.DEV_TOMCAT_USERNAME }}:${{ secrets.DEV_TOMCAT_PASSWORD }}" \
+          -u "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
           -T target/TrainBook-1.0.0-SNAPSHOT.war \
-          "http://${{ secrets.DEV_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
+          "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/TrainBook&update=true"
