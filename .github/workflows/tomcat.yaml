@@ -1,36 +1,98 @@
-name: ci pipeline to build java code
+
+name: CI CD Pipeline - DEV Environment
 
 on:
   push:
-    branches: master
+    branches:
+      - master
 
 jobs:
+
+  # ==============================
+  # BUILD JAVA APPLICATION
+  # ==============================
+
   build:
+    name: Build Java Application
     runs-on: ubuntu-latest
 
     steps:
-      - name: checkout code
+
+      - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: set-up jdk
+      - name: Setup JDK
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: validate with maven
+      # Install Maven
+      - name: Install Maven
+        run: |
+          sudo apt-get update
+          sudo apt-get install maven -y
+
+      - name: Check Java and Maven versions
+        run: |
+          java -version
+          mvn -version
+
+      # Maven validation
+      - name: Validate with Maven
         run: mvn validate
 
-      - name: compile with maven
+      # Maven compilation
+      - name: Compile with Maven
         run: mvn compile
 
-      - name: test with maven
+      # Maven testing
+      - name: Test with Maven
         run: mvn test
 
-      - name: package with maven
-        run: mvn package
+      # Generate WAR file
+      - name: Package with Maven
+        run: mvn clean package
 
-      - name: verify war file
-        run: ls -lh target/
+      # Verify WAR file
+      - name: Verify WAR file
+        run: |
+          ls -lh target/
+          test -f target/TrainBook-1.0.0-SNAPSHOT.war
 
-     
+      # Upload WAR artifact
+      - name: Upload WAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-war
+          path: target/TrainBook-1.0.0-SNAPSHOT.war
+          if-no-files-found: error
+          retention-days: 7
+
+
+  # ==============================
+  # DEPLOY TO DEV TOMCAT
+  # ==============================
+
+  deploy-dev:
+    name: Deploy to DEV Tomcat
+    needs: build
+    runs-on: ubuntu-latest
+    environment: developer
+
+    steps:
+
+      # Download WAR artifact
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
+
+      # Deploy WAR to DEV
+      - name: Deploy WAR to DEV Tomcat
+        run: |
+          curl --fail --show-error \
+          -u "${{ secrets.DEV_TOMCAT_USERNAME }}:${{ secrets.DEV_TOMCAT_PASSWORD }}" \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://${{ secrets.DEV_TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
