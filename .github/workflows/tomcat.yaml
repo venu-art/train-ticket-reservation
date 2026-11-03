@@ -1,5 +1,5 @@
 
-name: CI CD Pipeline - DEV Environment
+name: CI CD Pipeline - Four Environments
 
 on:
   push:
@@ -18,7 +18,6 @@ jobs:
 
     steps:
 
-      # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v5
 
@@ -41,23 +40,23 @@ jobs:
           java -version
           mvn -version
 
-      # Validate project
+      # Validate
       - name: Validate with Maven
         run: mvn validate
 
-      # Compile Java code
+      # Compile
       - name: Compile with Maven
         run: mvn compile
 
-      # Test application
+      # Test
       - name: Test with Maven
         run: mvn test
 
-      # Generate WAR file
+      # Generate WAR
       - name: Package with Maven
         run: mvn clean package
 
-      # Verify WAR file
+      # Verify WAR
       - name: Verify WAR file
         run: |
           ls -lh target/
@@ -74,52 +73,182 @@ jobs:
 
 
   # ==================================
-  # DEPLOY TO DEV ENVIRONMENT
+  # DEPLOY TO DEV
   # ==================================
 
   deploy-dev:
-    name: Deploy to DEV Tomcat
+    name: Deploy to DEV
     needs: build
     runs-on: ubuntu-latest
     environment: developer
 
     steps:
 
-      # Download WAR artifact
       - name: Download WAR file
         uses: actions/download-artifact@v4
         with:
           name: application-war
           path: target/
 
-      # Validate DEV host
       - name: Validate DEV host
         env:
           TOMCAT_HOST: ${{ secrets.DEV_TOMCAT_HOST }}
         run: |
           if [ -z "$TOMCAT_HOST" ]; then
-            echo "ERROR: DEV host is empty"
+            echo "DEV host is empty"
             exit 1
           fi
 
           if [[ "$TOMCAT_HOST" =~ [[:space:]] ]]; then
-            echo "ERROR: DEV host contains spaces"
-            exit 1
-          fi
-
-          if [[ "$TOMCAT_HOST" == http://* || "$TOMCAT_HOST" == https://* ]]; then
-            echo "ERROR: Enter only the IP address or hostname"
+            echo "DEV host contains spaces"
             exit 1
           fi
 
           echo "DEV host format is valid"
 
-      # Deploy WAR to DEV Tomcat
       - name: Deploy WAR to DEV Tomcat
         env:
           TOMCAT_HOST: ${{ secrets.DEV_TOMCAT_HOST }}
           TOMCAT_USERNAME: ${{ secrets.DEV_TOMCAT_USERNAME }}
           TOMCAT_PASSWORD: ${{ secrets.DEV_TOMCAT_PASSWORD }}
+        run: |
+          curl --fail --show-error \
+          -u "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+
+  # ==================================
+  # DEPLOY TO TEST
+  # ==================================
+
+  deploy-test:
+    name: Deploy to TEST
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: tester
+
+    steps:
+
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
+
+      - name: Validate TEST host
+        env:
+          TOMCAT_HOST: ${{ secrets.TEST_TOMCAT_HOST }}
+        run: |
+          if [ -z "$TOMCAT_HOST" ]; then
+            echo "TEST host is empty"
+            exit 1
+          fi
+
+          if [[ "$TOMCAT_HOST" =~ [[:space:]] ]]; then
+            echo "TEST host contains spaces"
+            exit 1
+          fi
+
+          echo "TEST host format is valid"
+
+      - name: Deploy WAR to TEST Tomcat
+        env:
+          TOMCAT_HOST: ${{ secrets.TEST_TOMCAT_HOST }}
+          TOMCAT_USERNAME: ${{ secrets.TEST_TOMCAT_USERNAME }}
+          TOMCAT_PASSWORD: ${{ secrets.TEST_TOMCAT_PASSWORD }}
+        run: |
+          curl --fail --show-error \
+          -u "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+
+  # ==================================
+  # DEPLOY TO PRE-PROD
+  # ==================================
+
+  deploy-preprod:
+    name: Deploy to PRE-PROD
+    needs: deploy-test
+    runs-on: ubuntu-latest
+    environment: preprod
+
+    steps:
+
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
+
+      - name: Validate PRE-PROD host
+        env:
+          TOMCAT_HOST: ${{ secrets.PREPROD_TOMCAT_HOST }}
+        run: |
+          if [ -z "$TOMCAT_HOST" ]; then
+            echo "PRE-PROD host is empty"
+            exit 1
+          fi
+
+          if [[ "$TOMCAT_HOST" =~ [[:space:]] ]]; then
+            echo "PRE-PROD host contains spaces"
+            exit 1
+          fi
+
+          echo "PRE-PROD host format is valid"
+
+      - name: Deploy WAR to PRE-PROD Tomcat
+        env:
+          TOMCAT_HOST: ${{ secrets.PREPROD_TOMCAT_HOST }}
+          TOMCAT_USERNAME: ${{ secrets.PREPROD_TOMCAT_USERNAME }}
+          TOMCAT_PASSWORD: ${{ secrets.PREPROD_TOMCAT_PASSWORD }}
+        run: |
+          curl --fail --show-error \
+          -u "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
+          -T target/TrainBook-1.0.0-SNAPSHOT.war \
+          "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+
+  # ==================================
+  # DEPLOY TO PROD
+  # ==================================
+
+  deploy-prod:
+    name: Deploy to PROD
+    needs: deploy-preprod
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+
+      - name: Download WAR file
+        uses: actions/download-artifact@v4
+        with:
+          name: application-war
+          path: target/
+
+      - name: Validate PROD host
+        env:
+          TOMCAT_HOST: ${{ secrets.PROD_TOMCAT_HOST }}
+        run: |
+          if [ -z "$TOMCAT_HOST" ]; then
+            echo "PROD host is empty"
+            exit 1
+          fi
+
+          if [[ "$TOMCAT_HOST" =~ [[:space:]] ]]; then
+            echo "PROD host contains spaces"
+            exit 1
+          fi
+
+          echo "PROD host format is valid"
+
+      - name: Deploy WAR to PROD Tomcat
+        env:
+          TOMCAT_HOST: ${{ secrets.PROD_TOMCAT_HOST }}
+          TOMCAT_USERNAME: ${{ secrets.PROD_TOMCAT_USERNAME }}
+          TOMCAT_PASSWORD: ${{ secrets.PROD_TOMCAT_PASSWORD }}
         run: |
           curl --fail --show-error \
           -u "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
