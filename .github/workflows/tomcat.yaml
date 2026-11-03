@@ -172,7 +172,7 @@ jobs:
     name: Deploy to PRE-PROD
     needs: deploy-test
     runs-on: ubuntu-latest
-    environment: preprod
+    environment: prepod
 
     steps:
 
