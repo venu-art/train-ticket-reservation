@@ -61,8 +61,8 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           args: >
-            -Dsonar.projectKey=vcube154-train-book
-            -Dsonar.projectName=vcube154-train-book
+            -Dsonar.projectKey=venu-train-book
+            -Dsonar.projectName=venu-train-book
 
       # 10. Configure Maven Credentials for Nexus
       - name: Configure Maven Settings
@@ -86,11 +86,9 @@ jobs:
 
       # 11. Deploy Artifact to Nexus
       - name: Deploy to Nexus
-        env:
-          NEXUS_URL: ${{ secrets.NEXUS_URL }}
         run: |
           mvn deploy -DskipTests \
-            -DaltDeploymentRepository=nexus::default::${NEXUS_URL}
+            -DaltDeploymentRepository=nexus::default::${{ secrets.NEXUS_URL }}
 
       # 12. Upload WAR Artifact for CD
       - name: Upload WAR Artifact
