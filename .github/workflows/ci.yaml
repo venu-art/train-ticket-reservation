@@ -1,0 +1,102 @@
+
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build and Analyze Java Application
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout source code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Java
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 3. Install Maven
+      - name: Install Maven
+        run: |
+          sudo apt-get update
+          sudo apt-get install maven -y
+          java -version
+          mvn -version
+
+      # 4. Validate
+      - name: Validate with Maven
+        run: mvn validate
+
+      # 5. Compile
+      - name: Compile with Maven
+        run: mvn compile
+
+      # 6. Test
+      - name: Test with Maven
+        run: mvn test
+
+      # 7. Package
+      - name: Package with Maven
+        run: mvn clean package
+
+      # 8. Verify WAR file
+      - name: Verify WAR File
+        run: |
+          ls -lh target/
+          test -f target/TrainBook-1.0.0-SNAPSHOT.war
+
+      # 9. SonarQube Scan
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >
+            -Dsonar.projectKey=vcube154-train-book
+            -Dsonar.projectName=vcube154-train-book
+
+      # 10. Configure Maven Credentials for Nexus
+      - name: Configure Maven Settings
+        env:
+          NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: |
+          mkdir -p ~/.m2
+
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>nexus</id>
+                <username>${NEXUS_USERNAME}</username>
+                <password>${NEXUS_PASSWORD}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+
+      # 11. Deploy Artifact to Nexus
+      - name: Deploy to Nexus
+        env:
+          NEXUS_URL: ${{ secrets.NEXUS_URL }}
+        run: |
+          mvn deploy -DskipTests \
+            -DaltDeploymentRepository=nexus::default::${NEXUS_URL}
+
+      # 12. Upload WAR Artifact for CD
+      - name: Upload WAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-war
+          path: target/TrainBook-1.0.0-SNAPSHOT.war
+          if-no-files-found: error
+          retention-days: 7

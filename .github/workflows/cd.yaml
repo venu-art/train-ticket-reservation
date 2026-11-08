@@ -1,0 +1,49 @@
+
+name: CD Pipeline
+
+on:
+  workflow_run:
+    workflows:
+      - CI Pipeline
+    types:
+      - completed
+    branches:
+      - master
+
+jobs:
+  deploy:
+    name: Deploy WAR to Tomcat
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Download WAR from successful CI workflow
+      - name: Download WAR Artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          github_token: ${{ github.token }}
+          run_id: ${{ github.event.workflow_run.id }}
+          name: application-war
+          path: target/
+
+      # 2. Verify WAR file
+      - name: Verify WAR File
+        run: |
+          ls -lh target/
+          test -f target/TrainBook-1.0.0-SNAPSHOT.war
+
+      # 3. Deploy WAR to Tomcat
+      - name: Deploy WAR to Tomcat
+        env:
+          TOMCAT_HOST: ${{ secrets.TOMCAT_HOST }}
+          TOMCAT_USERNAME: ${{ secrets.TOMCAT_USERNAME }}
+          TOMCAT_PASSWORD: ${{ secrets.TOMCAT_PASSWORD }}
+        run: |
+          curl --fail --show-error \
+            -u "$TOMCAT_USERNAME:$TOMCAT_PASSWORD" \
+            -T target/TrainBook-1.0.0-SNAPSHOT.war \
+            "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/TrainBook&update=true"
+
+      # 4. Deployment success message
+      - name: Deployment Completed
+        run: echo "Application deployed successfully to Tomcat"
